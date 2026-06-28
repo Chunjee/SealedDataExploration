@@ -7,6 +7,7 @@
 	<title>Chunjee's Supply/Demand Tracker</title>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js"></script>
 	<style>
 		:root {
 			--pico-font-family: system-ui, -apple-system, "Segoe UI", "Roboto", "Ubuntu", "Cantarell", "Noto Sans", sans-serif;
@@ -323,6 +324,43 @@
 			priceChart.update();
 			quantityChart.update();
 		});
+
+		// Find nearest date in dataset
+		function findNearestDate(inputDate) {
+			const input = new Date(inputDate);
+			if (isNaN(input)) return null;
+			
+			let nearest = dates[0];
+			let minDiff = Math.abs(new Date(dates[0]) - input);
+			
+			dates.forEach(date => {
+				const diff = Math.abs(new Date(date) - input);
+				if (diff < minDiff) {
+					minDiff = diff;
+					nearest = date;
+				}
+			});
+			
+			return nearest;
+		}
+
+		// Custom sort for currency
+		Tablesort.extend('currency', function(item) {
+		return item.match(/^[+\-]?\$\d+\.?\d*$/);
+		}, function(a, b) {
+		a = parseFloat(a.replace(/[+\$]/g, ''));
+		b = parseFloat(b.replace(/[+\$]/g, ''));
+		return a - b;
+		});
+
+		// Custom sort for percentages
+		Tablesort.extend('percentage', function(item) {
+		return item.match(/^[+\-]?\d+\.?\d*%$/);
+		}, function(a, b) {
+		a = parseFloat(a.replace(/[+%]/g, ''));
+		b = parseFloat(b.replace(/[+%]/g, ''));
+		return a - b;
+		});
 		
 		// Performance comparison
 		function calculatePerformance() {
@@ -395,7 +433,7 @@
 			
 			let tableHTML = `
 				<figure>
-					<table role="grid">
+					<table id="comparisonTable" role="grid" >
 						<thead>
 							<tr>
 								<th>Item</th>
@@ -425,25 +463,12 @@
 			
 			tableHTML += '</tbody></table></figure>';
 			performanceTableDiv.innerHTML = tableHTML;
+  			new Tablesort(document.getElementById('comparisonTable'));
 		}
-		// Find nearest date in dataset
-		function findNearestDate(inputDate) {
-			const input = new Date(inputDate);
-			if (isNaN(input)) return null;
-			
-			let nearest = dates[0];
-			let minDiff = Math.abs(new Date(dates[0]) - input);
-			
-			dates.forEach(date => {
-				const diff = Math.abs(new Date(date) - input);
-				if (diff < minDiff) {
-					minDiff = diff;
-					nearest = date;
-				}
-			});
-			
-			return nearest;
-		}
+
+		tableHTML += '</tbody></table></figure>';
+		performanceTableDiv.innerHTML = tableHTML;
+		new Tablesort(document.getElementById('comparisonTable'));
 	</script>
 </body>
 </html>
