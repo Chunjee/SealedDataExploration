@@ -431,20 +431,61 @@
 		});
 		
 		// Filter functionality
-		const filterInput = document.getElementById('filterInput');
-		filterInput.addEventListener('input', function() {
-			const filterText = this.value.toLowerCase();
-			
-			[priceChart, quantityChart, velocityChart, pricingPressureChart].forEach(chart => {
-				chart.data.datasets.forEach((dataset, index) => {
-					const label = dataset.label.toLowerCase();
-					const matchesFilter = label.includes(filterText);
-					const meta = chart.getDatasetMeta(index);
-					meta.hidden = !matchesFilter;
-				});
-				chart.update();
-			});
-		});
+const filterInput = document.getElementById('filterInput');
+filterInput.addEventListener('input', function() {
+    const filterText = this.value.toLowerCase();
+    
+    [priceChart, quantityChart, velocityChart, pricingPressureChart].forEach(chart => {
+        // Store original data if not already stored
+        if (!chart.originalLabels) {
+            chart.originalLabels = [...chart.data.labels];
+            chart.originalData = chart.data.datasets.map(dataset => {
+                return {
+                    ...dataset,
+                    data: [...dataset.data]
+                };
+            });
+        }
+        
+        // Filter datasets by label (this also hides them from legend)
+        chart.data.datasets.forEach((dataset, index) => {
+            const label = dataset.label.toLowerCase();
+            const matchesFilter = filterText === '' || label.includes(filterText);
+            const meta = chart.getDatasetMeta(index);
+            meta.hidden = !matchesFilter;
+        });
+        
+        // Filter dates to only show those with data from visible datasets
+        const visibleDatasets = chart.data.datasets.filter((dataset, index) => {
+            return !chart.getDatasetMeta(index).hidden;
+        });
+        
+        const filteredLabels = [];
+        const filteredDataArrays = chart.originalData.map(() => []);
+        
+        chart.originalLabels.forEach((label, i) => {
+            const hasData = visibleDatasets.some((dataset, datasetIndex) => {
+                const originalIndex = chart.data.datasets.indexOf(dataset);
+                const originalDataset = chart.originalData[originalIndex];
+                return originalDataset.data[i] !== null && originalDataset.data[i] !== undefined;
+            });
+            
+            if (hasData) {
+                filteredLabels.push(label);
+                chart.originalData.forEach((originalDataset, datasetIndex) => {
+                    filteredDataArrays[datasetIndex].push(originalDataset.data[i]);
+                });
+            }
+        });
+        
+        chart.data.labels = filteredLabels;
+        chart.data.datasets.forEach((dataset, index) => {
+            dataset.data = filteredDataArrays[index];
+        });
+        
+        chart.update();
+    });
+});
 		
 		function findNearestDate(inputDate) {
 			const input = new Date(inputDate);
